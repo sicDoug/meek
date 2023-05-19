@@ -1,0 +1,21 @@
+# Config file for meek
+# Edit with care, else it might panic
+
+# Note that only chat completion models are currently supported
+# Please checkout OpenAI's documentation
+model = "gpt-3.5-turbo"
+
+# Value between 0 and 2
+temperature = 0.2
+
+# Color of the output
+# Supported values are:
+#   "black"
+#   "red"
+#   "green"
+#   "yellow"
+#   "blue"
+#   "magenta"
+#   "cyan"
+#   "white"
+color = "yellow"
