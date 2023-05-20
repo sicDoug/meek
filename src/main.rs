@@ -18,33 +18,40 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-    let paths = Paths::get();
+    let paths = Paths::get()?;
+
+    let args = Args::parse();
 
     // clear the chat
     // TODO make this independent of other args
-    if Args::parse().clear {
-        clear_log(&paths.log);
-        return Ok(());
+    if args.clear {
+        if let Ok(()) = clear_log(&paths.log) {
+            println!("\nHistory file deleted\n");
+        } else {
+            println!("\nNo file to delete\n");
+        }
     }
 
-    // collect all non-flag args in vector of strings
-    let mut prompt = Args::parse().prompt.join(" ");
+    // collect all non-flag args to string
+    let mut prompt = args.prompt.join(" ");
 
     // appends potential input file to prompt
-    if let Some(input_path) = Args::parse().input {
-        let contents = fs::read_to_string(&input_path)
-            .expect("this needs handling");
+    if let Some(input_path) = args.input {
+        let contents = fs::read_to_string(&input_path)?;
+
         let file_name = input_path
-            .file_name()
-            .unwrap()
             .to_str()
             .unwrap();
         prompt += &format!("\n\n{}\n```\n{}```", file_name, contents);
     }
 
-    let config = load_config(&paths.config);
+    if prompt.is_empty() {
+        return Ok(());
+    }
 
-    start_stream(&paths, &config, prompt).await.unwrap();
+    let config = load_config(&paths.config)?;
+
+    start_stream(&paths, &config, prompt).await?;
 
     Ok(())
 }

@@ -6,7 +6,7 @@
 model = "gpt-3.5-turbo"
 
 # Value between 0 and 2
-temperature = 0.2
+temperature = 0.5
 
 # Color of the output
 # Supported values are:

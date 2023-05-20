@@ -7,10 +7,10 @@ pub enum Role {
 }
 
 impl Role {
-    pub fn in_string(&self) -> String {
+    pub fn get_str(&self) -> &'static str {
         match *self {
-            Role::User      => "user".to_string(),
-            Role::Assistant => "assistant".to_string(),
+            Role::User      => "user",
+            Role::Assistant => "assistant",
         }
     }
 }
@@ -22,14 +22,14 @@ pub struct Message {
 }
 
 pub trait Push {
-    fn add_new(&mut self, role: Role, content: &String);
+    fn add_new(&mut self, role: Role, content: &str);
 }
 
 impl Push for Vec<Message> {
-    fn add_new(&mut self, role: Role, content: &String) {
+    fn add_new(&mut self, role: Role, content: &str) {
         self.push(Message {
-            role: role.in_string(),
-            content: content.to_string(),
+            role: role.get_str().to_owned(),
+            content: content.to_owned(),
         })
     }
 }
@@ -43,12 +43,15 @@ pub struct Payload {
 }
 
 impl Payload {
-    pub fn construct(config: &Config, messages: &Vec<Message>) -> String {
+    pub fn construct(
+        config: &Config,
+        messages: &Vec<Message>
+    ) -> Result<String, serde_json::Error> {
         serde_json::to_string(&Payload {
             model:       config.model.to_owned(),
             temperature: config.temperature.to_owned(),
             messages:    messages.to_vec(),
             stream:      true,
-        }).unwrap()
+        })
     }
 }

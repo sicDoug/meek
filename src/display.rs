@@ -1,24 +1,26 @@
 use std::io::Write;
 
-// TODO use a better method
-pub fn colorize(color: &str, text: &str) -> String {
-    match color {
-        "black"     => "\x1b[30m".to_owned() + text,
-        "red"       => "\x1b[31m".to_owned() + text,
-        "green"     => "\x1b[32m".to_owned() + text,
-        "yellow"    => "\x1b[33m".to_owned() + text,
-        "blue"      => "\x1b[34m".to_owned() + text,
-        "magenta"   => "\x1b[35m".to_owned() + text,
-        "cyan"      => "\x1b[36m".to_owned() + text,
-        "white"     => "\x1b[37m".to_owned() + text,
-        "none"      => "\x1b[0m".to_owned()  + text,
-        _           => "\x1b[0m".to_owned()  + text,
-    }
+// sets terminal color by printing ANSI
+// TODO maybe set an enum for this
+pub fn set_color<T: Into<String>>(color: T) {
+    let ansi = match color.into().as_str() {
+        "black"     => "\x1b[30m",
+        "red"       => "\x1b[31m",
+        "green"     => "\x1b[32m",
+        "yellow"    => "\x1b[33m",
+        "blue"      => "\x1b[34m",
+        "magenta"   => "\x1b[35m",
+        "cyan"      => "\x1b[36m",
+        "white"     => "\x1b[37m",
+        "none"      => "\x1b[0m",
+        _           => "\x1b[0m",
+    };
+
+    print!("{}", ansi);
 }
 
-pub fn write_continuous(color: &str, chunk: &str) {
-
-    print!("{}", colorize(&color, &chunk));
+pub fn write_continuous(chunk: &str) {
+    print!("{}", chunk);
 
     // flush stdout to avoid newlines
     std::io::stdout()
@@ -27,12 +29,9 @@ pub fn write_continuous(color: &str, chunk: &str) {
 }
 
 pub fn write_error(err_str: &str) {
-    println!(
-        "{}\n",
-        colorize(
-            &"red",
-            "The server responded with an error:"
-        )
-    );
-    println!("{}", colorize(&"none", err_str));
+    set_color("red");
+    eprintln!("The server responded with an error:\n");
+
+    set_color("none");
+    eprintln!("{}", err_str);
 }

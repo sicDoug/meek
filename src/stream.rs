@@ -6,20 +6,33 @@ use std::env;
 use reqwest::{ Client, header::CONTENT_TYPE };
 use serde_json::{ Value, from_str };
 
-pub async fn start_stream(paths: &Paths, config: &Config, prompt: String) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_stream(
+    paths: &Paths,
+    config: &Config,
+    prompt: String
+) -> Result<(), Box<dyn std::error::Error>> {
 
+    // get the api key
     let openai_api_key = env::var("OPENAI_API_KEY")
         .expect("No 'OPENAI_API_KEY' found in environment.");
 
-    let mut messages = load_log(&paths.log);
+    // load chat log
+    let mut messages = load_log(&paths.log)?;
+
+    // push the new prompt
     messages.add_new(Role::User, &prompt);
 
-    let payload = Payload::construct(&config, &messages);
+    // construct payload
+    let payload = Payload::construct(&config, &messages).unwrap();
 
-    let mut res_buffer = "".to_string();
+    // varible that will hold the complete response
+    let mut response_buffer = "".to_string();
 
+    // set output color
+    set_color(&config.color);
     print!("\n");
 
+    // POST and start stream
     let mut stream = Client::new()
         .post("https://api.openai.com/v1/chat/completions")
         .bearer_auth(openai_api_key)
@@ -28,12 +41,10 @@ pub async fn start_stream(paths: &Paths, config: &Config, prompt: String) -> Res
         .send()
         .await?;
 
+    // handle each chunk of incoming data
     while let Some(chunk) = stream.chunk().await? {
-
         // convert byte slice to string
-        let raw_string = String::from_utf8(chunk.to_vec())
-            .unwrap();
-
+        let raw_string = String::from_utf8(chunk.to_vec())?;
         // errors do not start with 'data: '
         if raw_string.starts_with("{") {
             write_error(raw_string.as_str());
@@ -42,22 +53,35 @@ pub async fn start_stream(paths: &Paths, config: &Config, prompt: String) -> Res
 
         // handle each line since each chunk can contain multiple objects
         let lines = raw_string
-            .split("\n")
-            .filter(|line| line.starts_with("data: "));
+            .lines()
+            .filter_map(|line| {
+                if line.starts_with("data: ") {
+                    Some(&line[5..])
+                } else {
+                    None
+                }
+            });
 
         for line in lines {
-            match from_str::<Value>(&line[5..]) {
+
+            // parse JSON from str
+            match from_str::<Value>(line) {
                 Ok(v)  => {
+                    // index out the content
                     if let Value::String(s) = &v["choices"][0]["delta"]["content"] {
-                        res_buffer += &s;
-                        write_continuous(&config.color.as_str(), &s);
+                        // write to stdout
+                        write_continuous(&s);
+                        response_buffer.push_str(s);
                     }
                 },
-                // TODO make certain that this is 'DONE'
                 Err(_) => {
-                    print!("\n\n");
-                    messages.add_new(Role::Assistant, &res_buffer);
-                    write_log(&paths.log, &messages);
+                    if line.contains("[DONE") {
+                        print!("\n\n");
+                        // push the response
+                        messages.add_new(Role::Assistant, &response_buffer);
+                        // write to log file
+                        write_log(&paths.log, &messages)?;
+                    }
                 },
             }
         }
