@@ -8,7 +8,7 @@ use serde_json::{ Value, from_str };
 
 pub async fn stream(
     messages: &Vec<Message>,
-    config: &Config,
+    config:   &Config,
 ) -> Result<String, Box<dyn std::error::Error>> {
 
     // get the api key

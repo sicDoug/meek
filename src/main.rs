@@ -12,35 +12,45 @@ use crate::{
 };
 
 use std::fs;
+use std::process;
 use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-    let paths = Paths::get()?;
+    let paths = Paths::get()
+        .unwrap_or_else(|e| {
+            println!("{}", e);
+            process::exit(1);
+        });
 
     let args = Args::parse();
 
     // clear the chat
     if args.clear {
         if let Ok(()) = clear_log(&paths.log) {
-            println!("\nHistory file deleted\n");
+            println!("History file deleted");
         } else {
-            println!("\nNo file to delete\n");
+            println!("No file to delete");
         }
     }
 
     if args.reset {
-        create_config(&paths.config)?;
-        print!("\nConfig file reset\n");
+        match create_config(&paths.config) {
+            Ok(()) => println!("Config file reset"),
+            Err(e) => eprintln!("{}", e),
+        }
     }
 
-    // collect all non-flag args to string
+    // collect vec of non-flag args to string
     let mut prompt = args.prompt.join(" ");
 
     // appends potential input file to prompt
     if let Some(input_path) = args.input {
-        let contents = fs::read_to_string(&input_path)?;
+        let contents = fs::read_to_string(&input_path).unwrap_or_else(|e| {
+                eprintln!("{}", e);
+                process::exit(1);
+        });
 
         let file_name = input_path
             .to_str()
@@ -54,22 +64,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // load chat log
-    let mut messages = load_log(&paths.log)?;
+    let mut messages = load_log(&paths.log).unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        process::exit(1);
+    });
 
     if args.system {
         // push system message to vec
         messages.add_new(Role::System, &prompt);
 
         // write to log file
-        write_log(&paths.log, &messages)?;
+        write_log(&paths.log, &messages).unwrap_or_else(|e| {
+            eprintln!("{}", e);
+            process::exit(1);
+        });
 
-        print!("\nSystem message added to log file\n");
+        print!("System message added to log file");
     } else {
         // push the new prompt
         messages.add_new(Role::User, &prompt);
 
         // load and map config file
-        let config = load_config(&paths.config)?;
+        let config = load_config(&paths.config).unwrap_or_else(|e| {
+            eprintln!("{}", e);
+            process::exit(1);
+        });
 
         // run the stream and get the complete response
         let response = stream(&messages, &config).await?;
@@ -78,7 +97,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         messages.add_new(Role::Assistant, &response);
 
         // write to log file
-        write_log(&paths.log, &messages)?;
+        write_log(&paths.log, &messages).unwrap_or_else(|e| {
+            println!("{}", e);
+            process::exit(1);
+        });
     }
 
     Ok(())
