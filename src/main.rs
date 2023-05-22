@@ -18,20 +18,18 @@ use clap::Parser;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-    let paths = Paths::get()
-        .unwrap_or_else(|e| {
-            println!("{}", e);
-            process::exit(1);
-        });
+    let paths = Paths::get().unwrap_or_else(|e| {
+        println!("{}", e);
+        process::exit(1);
+    });
 
     let args = Args::parse();
 
     // clear the chat
     if args.clear {
-        if let Ok(()) = clear_log(&paths.log) {
-            println!("History file deleted");
-        } else {
-            println!("No file to delete");
+        match clear_log(&paths.log) {
+            Ok(()) => println!("History file deleted"),
+            Err(_) => println!("No file to delete"),
         }
     }
 
@@ -48,8 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // appends potential input file to prompt
     if let Some(input_path) = args.input {
         let contents = fs::read_to_string(&input_path).unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                process::exit(1);
+            eprintln!("{}", e);
+            process::exit(1);
         });
 
         let file_name = input_path

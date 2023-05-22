@@ -3,6 +3,8 @@ use crate::display::*;
 use crate::Config;
 
 use std::env;
+use std::io;
+use std::process;
 use reqwest::{ Client, header::CONTENT_TYPE };
 use serde_json::{ Value, from_str };
 
@@ -12,14 +14,16 @@ pub async fn stream(
 ) -> Result<String, Box<dyn std::error::Error>> {
 
     // get the api key
-    let openai_api_key = env::var("OPENAI_API_KEY")
-        .expect("No 'OPENAI_API_KEY' found in environment.");
+    let openai_api_key = env::var("OPENAI_API_KEY").unwrap_or_else(|_| {
+        eprintln!("No 'OPENAI_API_KEY' found in environment.");
+        process::exit(1);
+    });
 
     // construct payload
-    let payload = Payload::construct(&config, &messages).unwrap();
+    let payload = Payload::construct(&config, &messages)?;
 
     // varible that will hold the complete response to return
-    let mut response_buffer = "".to_string();
+    let mut response_buffer = String::new();
 
     // set output color
     set_color(&config.color);
@@ -79,5 +83,5 @@ pub async fn stream(
             }
         }
     }
-    Ok("error".to_string())
+    Err(Box::new(io::Error::new(io::ErrorKind::Other, "Stream failed")))
 }
