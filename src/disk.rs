@@ -1,9 +1,12 @@
 use crate::options::Message;
-use std::fs;
-use std::fs::OpenOptions;
-use std::path::PathBuf;
-use std::io::Read;
-use serde::{ Deserialize };
+
+use std::{
+    fs,
+    fs::OpenOptions,
+    path::PathBuf,
+    io::Read,
+};
+use serde::Deserialize;
 use rustix::process;
 
 #[derive(Deserialize)]
@@ -18,14 +21,17 @@ pub struct Paths {
     pub log:    PathBuf,
 }
 
+pub fn create_config(config_path: &PathBuf) -> Result<(), String> {
+    let default_config = include_str!("default_config.toml");
+
+    fs::write(&config_path, default_config)
+        .map_err(|e| format!("Failed to distribute config: {}", e))?;
+
+    Ok(())
+}
+
 impl Paths {
     pub fn get() -> Result<Self, String> {
-
-        // get the PID of the terminal instance
-        let pid = process::getppid()
-            .ok_or_else(|| "Failed to get parent PID".to_string())?
-            .as_raw_nonzero()
-            .to_string();
 
         // get the path for the main dir
         let main_dir_path = dirs::home_dir()
@@ -35,6 +41,12 @@ impl Paths {
         // get the path for the config file
         let config_path = main_dir_path
             .join("config.toml");
+
+        // get the PID of the terminal instance
+        let pid = process::getppid()
+            .ok_or_else(|| "Failed to get parent PID".to_string())?
+            .as_raw_nonzero()
+            .to_string();
 
         // get the path for the current log file
         let log_path = main_dir_path
@@ -48,10 +60,7 @@ impl Paths {
 
         // copy the default config to the main dir if necessary
         if !config_path.exists() {
-            let default_config = include_str!("default_config.toml");
-
-            fs::write(&config_path, default_config)
-                .map_err(|e| format!("Failed to distribute config: {}", e))?;
+            create_config(&config_path)?;
         }
 
         Ok(Self {
@@ -108,7 +117,7 @@ pub fn load_log(path: &PathBuf) -> Result<Vec<Message>, String> {
 }
 
 pub fn write_log(
-    path: &PathBuf,
+    path:     &PathBuf,
     messages: &Vec<Message>
 ) -> Result<(), String> {
 

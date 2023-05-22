@@ -13,4 +13,10 @@ pub struct Args {
     /// Delete chat history
     #[clap(short, long)]
     pub clear: bool,
+    /// Add System message
+    #[clap(short, long)]
+    pub system: bool,
+    /// Reset config
+    #[clap(long)]
+    pub reset: bool,
 }

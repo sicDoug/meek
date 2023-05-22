@@ -1,9 +1,9 @@
 use std::io::Write;
 
 // sets terminal color by printing ANSI
-// TODO maybe set an enum for this
+// TODO maybe set an enum for colors
 pub fn set_color<T: Into<String>>(color: T) {
-    let ansi = match color.into().as_str() {
+    let ansi = match color.into().to_lowercase().as_str() {
         "black"     => "\x1b[30m",
         "red"       => "\x1b[31m",
         "green"     => "\x1b[32m",
@@ -19,7 +19,7 @@ pub fn set_color<T: Into<String>>(color: T) {
     print!("{}", ansi);
 }
 
-pub fn write_continuous(chunk: &str) {
+pub fn print_continuous(chunk: &str) {
     print!("{}", chunk);
 
     // flush stdout to avoid newlines
@@ -28,7 +28,7 @@ pub fn write_continuous(chunk: &str) {
         .unwrap();
 }
 
-pub fn write_error(err_str: &str) {
+pub fn print_error(err_str: &str) {
     set_color("red");
     eprintln!("The server responded with an error:\n");
 

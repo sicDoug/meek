@@ -1,15 +1,14 @@
 mod args;
+mod stream;
+mod disk;
 mod options;
 mod display;
-mod disk;
-mod stream;
 
 use crate::{
     args::Args,
-    stream::start_stream,
-    disk::Paths,
-    disk::clear_log,
-    disk::load_config,
+    stream::stream,
+    disk::*,
+    options::{ Role, Push },
 };
 
 use std::fs;
@@ -23,13 +22,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     // clear the chat
-    // TODO make this independent of other args
     if args.clear {
         if let Ok(()) = clear_log(&paths.log) {
             println!("\nHistory file deleted\n");
         } else {
             println!("\nNo file to delete\n");
         }
+    }
+
+    if args.reset {
+        create_config(&paths.config)?;
+        print!("\nConfig file reset\n");
     }
 
     // collect all non-flag args to string
@@ -45,13 +48,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         prompt += &format!("\n\n{}\n```\n{}```", file_name, contents);
     }
 
+    // return early if no non-flag args nor input file were given
     if prompt.is_empty() {
         return Ok(());
     }
 
-    let config = load_config(&paths.config)?;
+    // load chat log
+    let mut messages = load_log(&paths.log)?;
 
-    start_stream(&paths, &config, prompt).await?;
+    if args.system {
+        // push system message to vec
+        messages.add_new(Role::System, &prompt);
+
+        // write to log file
+        write_log(&paths.log, &messages)?;
+
+        print!("\nSystem message added to log file\n");
+    } else {
+        // push the new prompt
+        messages.add_new(Role::User, &prompt);
+
+        // load and map config file
+        let config = load_config(&paths.config)?;
+
+        // run the stream and get the complete response
+        let response = stream(&messages, &config).await?;
+
+        // push the response
+        messages.add_new(Role::Assistant, &response);
+
+        // write to log file
+        write_log(&paths.log, &messages)?;
+    }
 
     Ok(())
 }

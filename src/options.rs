@@ -2,6 +2,7 @@ use crate::disk::Config;
 use serde::{ Serialize, Deserialize };
 
 pub enum Role {
+    System,
     User,
     Assistant,
 }
@@ -9,6 +10,7 @@ pub enum Role {
 impl Role {
     pub fn get_str(&self) -> &'static str {
         match *self {
+            Role::System     => "system",
             Role::User      => "user",
             Role::Assistant => "assistant",
         }
