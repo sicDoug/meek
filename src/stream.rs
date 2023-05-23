@@ -44,11 +44,12 @@ pub async fn stream(
         let raw_string = String::from_utf8(chunk.to_vec())?;
         // errors do not start with 'data: '
         if raw_string.starts_with("{") {
+            set_color("none");
             print_error(raw_string.as_str());
-            continue;
+            return Ok(raw_string);
         };
 
-        // handle each line since each chunk can contain multiple objects
+        // filter map each line starting with 'data: '
         let lines = raw_string
             .lines()
             .filter_map(|line| {
@@ -59,29 +60,27 @@ pub async fn stream(
                 }
             });
 
+        // handle each line since each chunk can contain multiple objects
         for line in lines {
 
             // parse JSON from str
-            if let Ok(v) = from_str::<Value>(line) {
+            if let Ok(json_obj) = from_str::<Value>(line) {
                 // index out the content
-                if let Value::String(s) = &v["choices"][0]["delta"]["content"] {
+                if let Value::String(s) = &json_obj["choices"][0]["delta"]["content"] {
                     // write to stdout
                     print_continuous(&s);
                     response_buffer.push_str(s);
                 }
-            } else {
-                if line.contains("[DONE]") {
-                    set_color("none");
-                    print!("\n\n");
+            } else if line.contains("[DONE]") {
+                set_color("none");
+                print!("\n\n");
 
-                    // push the response
-                    //messages.add_new(Role::Assistant, &response_buffer);
-                    // write to log file
-                    //write_log(&paths.log, &messages)?;
-                    return Ok(response_buffer);
-                }
+                // return the response
+                return Ok(response_buffer);
             }
         }
     }
-    Err(Box::new(io::Error::new(io::ErrorKind::Other, "Stream failed")))
+
+    // if neither 'done' nor error is received from the server
+    Err(Box::new(io::Error::new(io::ErrorKind::Other, "Unknown failure")))
 }

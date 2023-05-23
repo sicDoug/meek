@@ -1,7 +1,6 @@
 use std::io::Write;
 
 // sets terminal color by printing ANSI
-// TODO maybe set an enum for colors
 pub fn set_color<T: Into<String>>(color: T) {
     let ansi = match color.into().to_lowercase().as_str() {
         "black"     => "\x1b[30m",
