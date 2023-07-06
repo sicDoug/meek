@@ -19,4 +19,9 @@ pub struct Args {
     /// Reset config
     #[clap(long)]
     pub reset: bool,
+    #[clap(short, long)]
+    pub list: bool,
+    /// Do not stream
+    #[clap(long)]
+    pub no_stream: bool,
 }
