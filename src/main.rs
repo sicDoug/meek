@@ -45,24 +45,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut prompt = args.prompt.join(" ");
 
     // appends potential input file to prompt
-    if let Some(input_path) = args.input {
+    args.input.map(|input_path| {
         let contents = fs::read_to_string(&input_path).unwrap_or_else(|e| {
             eprintln!("{}", e);
             process::exit(1);
         });
-
         let file_name = input_path
             .to_str()
             .unwrap();
         // format and add the file contents and include filename
         prompt += &format!("\n\n{}\n```\n{}```", file_name, contents);
-    }
+    });
 
     // load chat log
-    let mut messages = load_log(&paths.log).unwrap_or_else(|e| {
-        eprintln!("{}", e);
-        process::exit(1);
-    });
+    let mut messages = load_log(&paths.log)?;
 
     if args.list {
         print!("\n");
@@ -87,34 +83,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         messages.add_new(Role::System, &prompt);
 
         // write to log file
-        write_log(&paths.log, &messages).unwrap_or_else(|e| {
-            eprintln!("{}", e);
-            process::exit(1);
-        });
+        write_log(&paths.log, &messages)?;
 
         println!("System message added to log file");
     } else {
         // push the new prompt
         messages.add_new(Role::User, &prompt);
 
-        if args.list {
-            print!("\n");
-
-            messages.iter().for_each(|m| {
-                set_color(match m.role.as_str() {
-                    "system"    => "blue",
-                    "assistant" => "yellow",
-                    _           => "none",
-                });
-                print!("{}\n\n", m.content);
-            });
-        }
-
         // load and map config file
-        let config = load_config(&paths.config).unwrap_or_else(|e| {
-            eprintln!("{}", e);
-            process::exit(1);
-        });
+        let config = load_config(&paths.config)?;
 
         // run the stream and get the complete response
         let response = stream(&messages, &config).await?;
@@ -123,10 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         messages.add_new(Role::Assistant, &response);
 
         // write to log file
-        write_log(&paths.log, &messages).unwrap_or_else(|e| {
-            println!("{}", e);
-            process::exit(1);
-        });
+        write_log(&paths.log, &messages)?;
     }
 
     Ok(())

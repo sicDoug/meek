@@ -1,5 +1,3 @@
-use std::io::Write;
-
 // sets terminal color by printing ANSI
 pub fn set_color<T: Into<String>>(color: T) {
     let ansi = match color.into().to_lowercase().as_str() {
@@ -16,15 +14,6 @@ pub fn set_color<T: Into<String>>(color: T) {
     };
 
     print!("{}", ansi);
-}
-
-pub fn print_continuous(chunk: &str) {
-    print!("{}", chunk);
-
-    // flush stdout to avoid newlines
-    std::io::stdout()
-        .flush()
-        .unwrap();
 }
 
 pub fn print_error(err_str: &str) {

@@ -47,7 +47,7 @@ pub struct Payload {
 impl Payload {
     pub fn construct(
         config: &Config,
-        messages: &Vec<Message>
+        messages: &[Message]
     ) -> Result<String, serde_json::Error> {
         serde_json::to_string(&Payload {
             model:       config.model.to_owned(),
