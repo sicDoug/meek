@@ -71,6 +71,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
             print!("{}\n\n", m.content);
         });
+
+        set_color("none");
     }
 
     // return early if no non-flag args nor input file were given
